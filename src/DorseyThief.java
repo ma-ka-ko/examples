@@ -7,7 +7,7 @@ import java.lang.Runtime;
 
 public class DorseyThief 
 {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	
 	public static void debug(String s)
 	{
@@ -19,10 +19,23 @@ public class DorseyThief
 	{
 		public int v;
 		public int g;
+		
 		public Sold ()
 		{
 			this.v = 0;
 			this.g = 0;
+		}
+		
+		public Sold (int v, int g)
+		{
+			this.v = v;
+			this.g = g;
+		}
+		
+		@Override
+		public String toString()
+		{
+			return "v="+v+", g="+g;
 		}
 		
 	}
@@ -40,6 +53,7 @@ public class DorseyThief
 		public int compareTo(Buyer b) 
 		{
 			//return b.g  - this.g;
+			if(this.g == b.g) return this.v - b.v;
 			return this.g - b.g;
 		}
 		@Override
@@ -49,7 +63,7 @@ public class DorseyThief
 		}
 	}
 	
-	public static Sold knapsac(ArrayList<Buyer> buyers, int totalGrams, int index)
+	public static Sold knapsack(ArrayList<Buyer> buyers, int totalGrams, int index)
 	{
 		Sold s = new Sold();
 		if ( index < 0 || totalGrams == 0)
@@ -60,14 +74,14 @@ public class DorseyThief
 		if (b.g > totalGrams)
 		{
 			debug(b + " X");
-			return knapsac(buyers, totalGrams, index-1);
+			return knapsack(buyers, totalGrams, index-1);
 		}
 		else
 		{
-			Sold with = knapsac(buyers, totalGrams-b.g, index -1);
+			Sold with = knapsack(buyers, totalGrams-b.g, index -1);
 			with.v += b.v;
 			with.g += b.g;
-			Sold without = knapsac(buyers, totalGrams, index-1);
+			Sold without = knapsack(buyers, totalGrams, index-1);
 			if (with.v >= without.v)
 			{
 				debug(b + " V");
@@ -79,6 +93,62 @@ public class DorseyThief
 				return without;
 			}
 		}
+	}
+	
+	public static Sold dp_knapsack(ArrayList<Buyer> buyers, int totalGrams)
+	{
+		int n = buyers.size();
+		Sold[][] K = new Sold[n+1][totalGrams+1];
+		for (int i=0; i<=n; i++)
+		{
+			for (int g=0; g <= totalGrams;g++)
+			{
+				//debug("i = "+i+" g = "+g);
+				if(i == 0 || g == 0)
+					K[i][g] = new Sold(0,0);
+				else
+				{
+					Buyer b1 = buyers.get(i-1);
+					//debug(b1.toString());
+					if ( b1.g <= g )
+					{
+						Sold t =  K[i-1][g - b1.g];
+						Sold without = K[i-1][g];
+						int withV = b1.v + t.v;
+						int withG = b1.g + t.g; 
+								
+						//Sold with = new Sold( b1.v + t.v,  b1.g + t.g );
+						
+						if (withV >= without.v && withG >= without.g)
+							K[i][g] = new Sold(withV,withG);
+						else
+							K[i][g] = without;
+					}
+					else
+						K[i][g] = K[i-1][g];
+				}
+				//debug("i = "+i+", g = "+g + "  ===> " +K[i][g]);
+			}
+		}
+		/*
+		System.out.print("  \t");
+		for (int y =0; y <=totalGrams; y++)
+		{
+			System.out.print("  "+ y+ "     "+ "\t");
+		}
+		System.out.print("\n");
+			
+		for(int x =0; x <=n; x++)
+		{
+			System.out.print("  " + x + "  \t");
+			for (int y =0; y <=totalGrams; y++)
+			{
+				System.out.print(K[x][y] + "\t");
+			}
+			System.out.print("\n");
+		}
+		*/
+		return K[n][totalGrams];
 	}
 	
 	
@@ -98,10 +168,11 @@ public class DorseyThief
 			Buyer b = new Buyer(v,g);
 			buyers.add(b);
 		}
-		debug(buyers.toString());
-		Collections.sort(buyers);
-		debug(buyers.toString());
-		Sold s = knapsac(buyers,x,n-1);
+		//Collections.sort(buyers);
+		//debug(buyers.toString());
+		//System.out.println(buyers.toString());
+		//Sold s = knapsack(buyers,x,n-1);
+		Sold s = dp_knapsack(buyers,x);
 		if (s.g == x)
 			System.out.println(s.v);
 		else
